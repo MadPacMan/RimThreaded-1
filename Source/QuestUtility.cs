@@ -1,6 +1,12 @@
-﻿using System;
+﻿using HarmonyLib;
+using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Text;
 using RimWorld;
+using Verse;
+using Verse.AI;
+using Verse.Sound;
 
 namespace RimThreaded
 {
@@ -8,18 +14,25 @@ namespace RimThreaded
     public class QuestUtility_Patch
     {
 
-        [ThreadStatic] public static List<ExtraFaction> tmpExtraFactions;
-        public static void InitializeThreadStatics()
+        public static bool GetExtraFaction(ref Faction __result, Pawn p, ExtraFactionType extraFactionType, Quest forQuest = null)
         {
-            tmpExtraFactions = new List<ExtraFaction>();
-        }
+            //tmpExtraFactions.Clear();
+            List<ExtraFaction> tmpExtraFactions = new List<ExtraFaction>();
+            QuestUtility.GetExtraFactionsFromQuestParts(p, tmpExtraFactions, forQuest);
+            for (int i = 0; i < tmpExtraFactions.Count; i++)
+            {
+                if (tmpExtraFactions[i].factionType == extraFactionType)
+                {
+                    Faction faction = tmpExtraFactions[i].faction;
+                    tmpExtraFactions.Clear();
+                    __result = faction;
+                    return false;
+                }
+            }
 
-        internal static void RunNonDestructivePatches()
-        {
-            Type original = typeof(QuestUtility);
-            Type patched = typeof(QuestUtility_Patch);
-            RimThreadedHarmony.AddAllMatchingFields(original, patched);
-            RimThreadedHarmony.TranspileFieldReplacements(original, "GetExtraFaction");
+            //tmpExtraFactions.Clear();
+            __result = null;
+            return false;
         }
 
         internal static void RunDestructivePatches()
@@ -28,7 +41,5 @@ namespace RimThreaded
             Type patched = typeof(QuestUtility_Patch);
             RimThreadedHarmony.Prefix(original, patched, "GetExtraFaction");
         }
-
-
     }
 }

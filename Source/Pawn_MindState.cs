@@ -7,13 +7,6 @@ namespace RimThreaded
 {
 	public class Pawn_MindState_Patch
 	{
-		internal static void RunDestructivePatches()
-		{
-			Type original = typeof(Pawn_MindState);
-			Type patched = typeof(Pawn_MindState_Patch);
-			RimThreadedHarmony.Prefix(original, patched, "MindStateTick");
-		}
-
 		public static bool MindStateTick(Pawn_MindState __instance)
 		{
 			if (__instance.wantsToTradeWithColony)
@@ -47,5 +40,11 @@ namespace RimThreaded
 			return false;
 		}
 
+        internal static void RunDestructivePatches()
+		{
+			Type original = typeof(Pawn_MindState);
+			Type patched = typeof(Pawn_MindState_Patch);
+			RimThreadedHarmony.Prefix(original, patched, "MindStateTick");
+		}
     }
 }

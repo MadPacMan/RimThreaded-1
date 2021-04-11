@@ -10,15 +10,7 @@ namespace RimThreaded
 
     public class GraphicDatabaseHeadRecords_Patch
     {
-
-        internal static void RunDestructivePatches()
-        {
-            Type original = typeof(GraphicDatabaseHeadRecords);
-            Type patched = typeof(GraphicDatabaseHeadRecords_Patch);
-            RimThreadedHarmony.Prefix(original, patched, "BuildDatabaseIfNecessary");
-        }
-        
-        static readonly MethodInfo reflectionMethod = AccessTools.Method(typeof(GraphicDatabaseHeadRecords), "BuildDatabaseIfNecessary");
+        static MethodInfo reflectionMethod = AccessTools.Method(typeof(GraphicDatabaseHeadRecords), "BuildDatabaseIfNecessary");
 
         static readonly Action buildDatabaseIfNecessary =
             (Action)Delegate.CreateDelegate
@@ -39,5 +31,11 @@ namespace RimThreaded
             return true;
         }
 
+        internal static void RunDestructivePatches()
+        {
+            Type original = typeof(GraphicDatabaseHeadRecords);
+            Type patched = typeof(GraphicDatabaseHeadRecords_Patch);
+            RimThreadedHarmony.Prefix(original, patched, "BuildDatabaseIfNecessary");
+        }
     }
 }

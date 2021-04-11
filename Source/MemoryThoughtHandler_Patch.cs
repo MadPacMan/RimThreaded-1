@@ -1,8 +1,6 @@
-﻿using HarmonyLib;
-using RimWorld;
+﻿using RimWorld;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using Verse;
 using static HarmonyLib.AccessTools;
 
@@ -19,7 +17,7 @@ namespace RimThreaded
             Type original = typeof(MemoryThoughtHandler);
             Type patched = typeof(MemoryThoughtHandler_Patch);
             RimThreadedHarmony.Prefix(original, patched, "RemoveMemory");
-            //RimThreadedHarmony.Prefix(original, patched, "TryGainMemory", new Type[] { typeof(Thought_Memory), typeof(Pawn) });
+            RimThreadedHarmony.Prefix(original, patched, "TryGainMemory", new Type[] { typeof(Thought_Memory), typeof(Pawn) });
         }
 
         public static bool RemoveMemory(MemoryThoughtHandler __instance, Thought_Memory th)
@@ -56,9 +54,13 @@ namespace RimThreaded
             newThought.otherPawn = otherPawn;
             if (!newThought.TryMergeWithExistingMemory(out bool showBubble))
             {
-                lock (__instance) //ADDED
+                lock (__instance)
                 {
-                    memoriesFieldRef(__instance).Add(newThought);
+                    List<Thought_Memory> newMemories = new List<Thought_Memory>(__instance.Memories)
+                    {
+                        newThought
+                    };
+                    memoriesFieldRef(__instance) = newMemories;
                 }
             }
 

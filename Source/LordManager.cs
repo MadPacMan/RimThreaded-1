@@ -1,4 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 using Verse;
 using Verse.AI.Group;
 
@@ -6,15 +10,6 @@ namespace RimThreaded
 {
     class LordManager_Patch
     {
-
-        internal static void RunDestructivePatches()
-        {
-            Type original = typeof(LordManager);
-            Type patched = typeof(LordManager_Patch);
-            RimThreadedHarmony.Prefix(original, patched, "LordOf", new Type[] { typeof(Pawn) });
-            RimThreadedHarmony.Prefix(original, patched, "RemoveLord");
-        }
-
         public static bool LordOf(LordManager __instance, ref Lord __result, Pawn p)
         {
             Lord lordResult = null;
@@ -29,6 +24,10 @@ namespace RimThreaded
                         {
                             if (lord.ownedPawns[j] == p)
                             {
+                                if(Lord_Patch.pawnsLord == null)
+                                {
+                                    Log.Error("Lord_Patch.pawnsLord is null");
+                                }
                                 lock (Lord_Patch.pawnsLord)
                                 {
                                     Lord_Patch.pawnsLord.SetOrAdd(p, lord);
@@ -38,10 +37,17 @@ namespace RimThreaded
                             }
                         }
                     }
-                    lock (Lord_Patch.pawnsLord)
+                    try
                     {
-                        Lord_Patch.pawnsLord.SetOrAdd(p, null);
+                        lock (Lord_Patch.pawnsLord)
+                        {
+                            Lord_Patch.pawnsLord.SetOrAdd(p, null);
+                        }
+                    } catch (NullReferenceException)
+                    {
+
                     }
+                    
                 }
             }
             __result = lordResult;
@@ -62,5 +68,12 @@ namespace RimThreaded
             return false;
         }
 
+        internal static void RunDestructivePatches()
+        {
+            Type original = typeof(LordManager);
+            Type patched = typeof(LordManager_Patch);
+            RimThreadedHarmony.Prefix(original, patched, "LordOf", new Type[] { typeof(Pawn) });
+            RimThreadedHarmony.Prefix(original, patched, "RemoveLord");
+        }
     }
 }

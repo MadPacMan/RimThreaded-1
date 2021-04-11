@@ -1,12 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 using Verse;
 using Verse.AI.Group;
 using static HarmonyLib.AccessTools;
 
 namespace RimThreaded
 {
-    [StaticConstructorOnStartup]
     class Lord_Patch
     {
         public static FieldRef<Lord, LordToil> curLordToil = FieldRefAccess<Lord, LordToil>("curLordToil");

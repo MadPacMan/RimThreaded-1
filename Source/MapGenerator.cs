@@ -18,14 +18,6 @@ namespace RimThreaded
                 (IEnumerable<GenStepWithParams>)parameters[3], 
                 (Action<Map>)parameters[4]);
 
-
-        internal static void RunDestructivePatches()
-        {
-            Type original = typeof(MapGenerator);
-            Type patched = typeof(MapGenerator_Patch);
-            RimThreadedHarmony.Prefix(original, patched, "GenerateMap");
-        }
-
         public static bool GenerateMap(ref Map __result, IntVec3 mapSize, MapParent parent, MapGeneratorDef mapGenerator, IEnumerable<GenStepWithParams> extraGenStepDefs = null, Action<Map> extraInitBeforeContentGen = null)
         {
             if (allThreads2.TryGetValue(CurrentThread, out ThreadInfo threadInfo))
@@ -40,6 +32,13 @@ namespace RimThreaded
                 return false;
             }
             return true;
+        }
+
+        internal static void RunDestructivePatches()
+        {
+            Type original = typeof(MapGenerator);
+            Type patched = typeof(MapGenerator_Patch);
+            RimThreadedHarmony.Prefix(original, patched, "GenerateMap");
         }
     }
 }

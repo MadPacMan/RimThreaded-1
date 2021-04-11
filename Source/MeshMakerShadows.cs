@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using System.Threading;
 using System;
 using Verse;
 using static RimThreaded.RimThreaded;
@@ -8,13 +9,6 @@ namespace RimThreaded
 {
     public class MeshMakerShadows_Patch
     {
-        internal static void RunDestructivePatches()
-        {
-            Type original = typeof(MeshMakerShadows);
-            Type patched = typeof(MeshMakerShadows_Patch);
-            RimThreadedHarmony.Prefix(original, patched, "NewShadowMesh", new Type[] { typeof(float), typeof(float), typeof(float) });
-        }
-
         static readonly Func<object[], object> safeFunction = parameters =>
             MeshMakerShadows.NewShadowMesh(
                 (float)parameters[0], 
@@ -34,5 +28,11 @@ namespace RimThreaded
             return true;        
         }
 
+        internal static void RunDestructivePatches()
+        {
+            Type original = typeof(MeshMakerShadows);
+            Type patched = typeof(MeshMakerShadows_Patch);
+            RimThreadedHarmony.Prefix(original, patched, "NewShadowMesh", new Type[] { typeof(float), typeof(float), typeof(float) });
+        }
     }
 }

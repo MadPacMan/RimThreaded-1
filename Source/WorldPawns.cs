@@ -23,29 +23,17 @@ namespace RimThreaded
             Method(typeof(WorldPawns), "ShouldMothball", new Type[] { typeof(Pawn) });
         private static readonly Func<WorldPawns, Pawn, bool> funcShouldMothball =
             (Func<WorldPawns, Pawn, bool>)Delegate.CreateDelegate(typeof(Func<WorldPawns, Pawn, bool>), methodShouldMothball);
-        public static void InitializeThreadStatics()
-        {
-            tmpPawnsToRemove = new List<Pawn>();
-        }
 
-        internal static void RunDestructivePatches()
-        {
-            Type original = typeof(WorldPawns);
-            Type patched = typeof(WorldPawns_Patch);
-            RimThreadedHarmony.Prefix(original, patched, "WorldPawnsTick");
-            RimThreadedHarmony.Prefix(original, patched, "get_AllPawnsAlive");
-        }
 
         public static bool get_AllPawnsAlive(WorldPawns __instance, ref List<Pawn> __result)
         {
-            List<Pawn> newAllPawnsAliveResult;
-            lock (__instance)
+            lock (allPawnsAliveResult(__instance))
             {
-                newAllPawnsAliveResult = new List<Pawn>(pawnsAlive(__instance));
-                newAllPawnsAliveResult.AddRange(pawnsMothballed(__instance));
-                allPawnsAliveResult(__instance) = newAllPawnsAliveResult;
+                allPawnsAliveResult(__instance).Clear();
+                allPawnsAliveResult(__instance).AddRange(pawnsAlive(__instance));
+                allPawnsAliveResult(__instance).AddRange(pawnsMothballed(__instance));
             }
-            __result = newAllPawnsAliveResult;
+            __result = allPawnsAliveResult(__instance);
             return false;
         }
 
@@ -100,7 +88,13 @@ namespace RimThreaded
             if (Find.TickManager.TicksGame % 15000 == 0)
                 DoMothballProcessing(__instance);
 
-            tmpPawnsToRemove.Clear();
+            if (tmpPawnsToRemove == null)
+            {
+                tmpPawnsToRemove = new List<Pawn>();
+            } else
+            {
+                tmpPawnsToRemove.Clear();
+            }
             foreach (Pawn pawn in pawnsDead(__instance))
             {
                 if (pawn == null)
@@ -133,5 +127,12 @@ namespace RimThreaded
             return false;
         }
 
+        internal static void RunDestructivePatches()
+        {
+            Type original = typeof(WorldPawns);
+            Type patched = typeof(WorldPawns_Patch);
+            RimThreadedHarmony.Prefix(original, patched, "WorldPawnsTick");
+            RimThreadedHarmony.Prefix(original, patched, "get_AllPawnsAlive");
+        }
     }
 }
