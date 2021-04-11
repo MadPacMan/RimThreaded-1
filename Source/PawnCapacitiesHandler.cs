@@ -1,26 +1,18 @@
 ﻿using HarmonyLib;
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using RimWorld;
 using Verse;
-using System.Reflection;
+using Verse.AI;
+using Verse.Sound;
 
 namespace RimThreaded
 {
 
     public class PawnCapacitiesHandler_Patch
     {
-        internal static void RunDestructivePatches()
-        {
-            Type original = typeof(PawnCapacitiesHandler);
-            Type patched = typeof(PawnCapacitiesHandler_Patch);
-            RimThreadedHarmony.Prefix(original, patched, "Notify_CapacityLevelsDirty");
-            RimThreadedHarmony.Prefix(original, patched, "Clear");
-            RimThreadedHarmony.Prefix(original, patched, "CapableOf");
-            ConstructorInfo constructorMethod = original.GetConstructor(new Type[] { typeof(Pawn) });
-            MethodInfo cpMethod = patched.GetMethod("Postfix_Constructor");
-            RimThreadedHarmony.harmony.Patch(constructorMethod, postfix: new HarmonyMethod(cpMethod));
-        }
-
         public static AccessTools.FieldRef<PawnCapacitiesHandler, Pawn> pawn =
             AccessTools.FieldRefAccess<PawnCapacitiesHandler, Pawn>("pawn");
         public static Dictionary<PawnCapacitiesHandler, DefMap<PawnCapacityDef, CacheElement2>> cachedCapacityLevelsDict =
@@ -132,7 +124,5 @@ namespace RimThreaded
             }
             return defMap[capacity];
         }
-
-
     }
 }

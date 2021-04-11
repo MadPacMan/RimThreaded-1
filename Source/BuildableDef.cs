@@ -1,22 +1,36 @@
-﻿using System;
+﻿using HarmonyLib;
+using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using RimWorld;
 using Verse;
+using Verse.AI;
+using Verse.Sound;
 
 namespace RimThreaded
 {
 
     public class BuildableDef_Patch
     {
-        [ThreadStatic] public static List<PlaceWorker> placeWorkersInstantiatedInt;
-
-        public static void RunNonDestructivePatches()
+        public static bool get_PlaceWorkers(BuildableDef __instance, ref List<PlaceWorker> __result)
         {
-            Type original = typeof(BuildableDef);
-            Type patched = typeof(BuildableDef_Patch);
-            RimThreadedHarmony.AddAllMatchingFields(original, patched, false);
-            RimThreadedHarmony.TranspileFieldReplacements(original, "get_PlaceWorkers");
-        }
+            if (__instance.placeWorkers == null)
+            {
+                __result = null;
+                return false;
+            }
 
+            List<PlaceWorker> tmpPlaceWorkersInstantiatedInt = new List<PlaceWorker>();
+            foreach (Type placeWorker in __instance.placeWorkers)
+            {
+                tmpPlaceWorkersInstantiatedInt.Add((PlaceWorker)Activator.CreateInstance(placeWorker));
+            }
+
+            __result = tmpPlaceWorkersInstantiatedInt;
+            return false;
+            
+        }
 
     }
 }

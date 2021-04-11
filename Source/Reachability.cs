@@ -1,4 +1,5 @@
-﻿using System;
+﻿using HarmonyLib;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Verse;
@@ -11,13 +12,19 @@ namespace RimThreaded
 
     public class Reachability_Patch
     {
-        [ThreadStatic] public static Queue<Region> openQueue;
-        [ThreadStatic] public static List<Region> destRegions;
-        [ThreadStatic] public static List<Region> startingRegions;
-        [ThreadStatic] public static HashSet<Region> regionsReached;
+        [ThreadStatic]
+        private static Queue<Region> openQueue;
+        [ThreadStatic]
+        private static List<Region> destRegions;
+        [ThreadStatic]
+        private static List<Region> startingRegions;
+        [ThreadStatic]
+        private static HashSet<Region> regionsReached;
 
         public static FieldRef<Reachability, Map> mapFieldRef = FieldRefAccess<Reachability, Map>("map");
         public static FieldRef<Reachability, ReachabilityCache> cacheFieldRef = FieldRefAccess<Reachability, ReachabilityCache>("cache");
+        //public static uint offsetReachedIndex = 1;
+        //private static readonly object reachedIndexLock = new object();
 
         private static readonly MethodInfo methodCheckCellBasedReachability =
             Method(typeof(Reachability), "CheckCellBasedReachability", new Type[] { typeof(IntVec3), typeof(LocalTargetInfo), typeof(PathEndMode), typeof(TraverseParms) });
@@ -28,21 +35,6 @@ namespace RimThreaded
             Method(typeof(Reachability), "CanUseCache", new Type[] { typeof(TraverseMode) });
         private static readonly Func<Reachability, TraverseMode, bool> funcCanUseCache =
             (Func<Reachability, TraverseMode, bool>)Delegate.CreateDelegate(typeof(Func<Reachability, TraverseMode, bool>), methodCanUseCache);
-
-        public static void InitializeThreadStatics()
-        {
-            openQueue = new Queue<Region>();
-            startingRegions = new List<Region>();
-            destRegions = new List<Region>();
-            regionsReached = new HashSet<Region>();
-        }
-
-        public static void RunDestructivePatches()
-        {
-            Type original = typeof(Reachability);
-            Type patched = typeof(Reachability_Patch);
-            RimThreadedHarmony.Prefix(original, patched, "CanReach", new Type[] { typeof(IntVec3), typeof(LocalTargetInfo), typeof(PathEndMode), typeof(TraverseParms) });
-        }
 
         private static void QueueNewOpenRegion(Region region, Queue<Region> openQueueParam, HashSet<Region> regionsReached)
         {
@@ -136,13 +128,20 @@ namespace RimThreaded
             }
 
             dest = (LocalTargetInfo)GenPath.ResolvePathMode(traverseParams.pawn, dest.ToTargetInfo(map), ref peMode);
+            //working = true;
             try
             {
                 PathGrid pathGrid = map.pathGrid;
                 RegionGrid regionGrid = map.regionGrid;
 
-                destRegions.Clear();
-
+                if (destRegions == null)
+                {
+                    destRegions = new List<Region>();
+                }
+                else
+                {
+                    destRegions.Clear();
+                }
                 switch (peMode)
                 {
                     case PathEndMode.OnCell:
@@ -152,6 +151,7 @@ namespace RimThreaded
                             {
                                 destRegions.Add(region);
                             }
+
                             break;
                         }
                     case PathEndMode.Touch:
@@ -161,18 +161,40 @@ namespace RimThreaded
 
                 if (destRegions.Count == 0 && traverseParams.mode != TraverseMode.PassAllDestroyableThings && traverseParams.mode != TraverseMode.PassAllDestroyableThingsNotWater)
                 {
+                    //FinalizeCheck();
                     __result = false;
                     return false;
                 }
 
                 destRegions.RemoveDuplicates();
-                regionsReached.Clear();
-                openQueue.Clear();
-                startingRegions.Clear();
-                
+
+                if (regionsReached == null)
+                {
+                    regionsReached = new HashSet<Region>();
+                }
+                else
+                {
+                    regionsReached.Clear();
+                }
+                if (openQueue == null)
+                {
+                    openQueue = new Queue<Region>();
+                }
+                else
+                {
+                    openQueue.Clear();
+                }
+                if(startingRegions == null)
+                {
+                    startingRegions = new List<Region>();
+                } else
+                {
+                    startingRegions.Clear();
+                }
                 DetermineStartRegions(map, start, startingRegions, pathGrid, regionGrid, openQueue, regionsReached);
                 if (openQueue.Count == 0 && traverseParams.mode != TraverseMode.PassAllDestroyableThings && traverseParams.mode != TraverseMode.PassAllDestroyableThingsNotWater)
                 {
+                    //FinalizeCheck();
                     __result = false;
                     return false;
                 }
@@ -192,16 +214,19 @@ namespace RimThreaded
                 if (traverseParams.mode == TraverseMode.PassAllDestroyableThings || traverseParams.mode == TraverseMode.PassAllDestroyableThingsNotWater || traverseParams.mode == TraverseMode.NoPassClosedDoorsOrWater)
                 {
                     bool result = funcCheckCellBasedReachability(__instance, start, dest, peMode, traverseParams);
+                    //FinalizeCheck();
                     __result = result;
                     return false;
                 }
 
                 bool result2 = CheckRegionBasedReachability(__instance, traverseParams, openQueue, regionsReached, startingRegions, destRegions);
+                //FinalizeCheck();
                 __result = result2;
                 return false;
             }
             finally
             {
+                //working = false;
             }
         }
 

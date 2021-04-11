@@ -1,6 +1,9 @@
 ﻿using RimWorld;
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 using Verse;
 using Verse.AI;
 using static HarmonyLib.AccessTools;
@@ -11,16 +14,9 @@ namespace RimThreaded
     {
         public static Dictionary<Pawn, List<Pawn>> pets = new Dictionary<Pawn, List<Pawn>>();
         public static bool petsInit = false;
+        //public static bool servantsFullyBuilt = false;
         public static FieldRef<Pawn_PlayerSettings, Pawn> master = FieldRefAccess<Pawn_PlayerSettings, Pawn>("master");
         public static FieldRef<Pawn_PlayerSettings, Pawn> pawn = FieldRefAccess<Pawn_PlayerSettings, Pawn>("pawn");
-
-        public static void RunDestructivePatches()
-        {
-            Type original = typeof(Pawn_PlayerSettings);
-            Type patched = typeof(Pawn_PlayerSettings_Patch);
-            RimThreadedHarmony.Prefix(original, patched, "set_Master");
-        }
-
         public static bool set_Master(Pawn_PlayerSettings __instance, Pawn value)
 		{
             if (value == null || master(__instance) == value)
@@ -65,27 +61,32 @@ namespace RimThreaded
         {
             lock (pets)
             {
-                if (petsInit == false)
+                for (int i = 0; i < PawnsFinder.AllMapsWorldAndTemporary_Alive.Count; i++)
                 {
-                    for (int i = 0; i < PawnsFinder.AllMapsWorldAndTemporary_Alive.Count; i++)
+                    Pawn p;
+                    try
                     {
-                        Pawn p = PawnsFinder.AllMapsWorldAndTemporary_Alive[i];
-                        if (p.playerSettings != null)
+                        p = PawnsFinder.AllMapsWorldAndTemporary_Alive[i];
+                    }
+                    catch (ArgumentOutOfRangeException)
+                    {
+                        break;
+                    }
+                    if (p.playerSettings != null)
+                    {
+                        Pawn master = p.playerSettings.Master;
+                        if (master != null)
                         {
-                            Pawn master = p.playerSettings.Master;
-                            if (master != null)
+                            if (!pets.TryGetValue(master, out List<Pawn> pawnList))
                             {
-                                if (!pets.TryGetValue(master, out List<Pawn> pawnList))
-                                {
-                                    pawnList = new List<Pawn>();
-                                }
-                                pawnList.Add(p);
+                                pawnList = new List<Pawn>();
                             }
+                            pawnList.Add(p);
                         }
                     }
-                    petsInit = true;
                 }
             }
+            petsInit = true;
         }
 	}
 }

@@ -1,9 +1,12 @@
 ﻿using HarmonyLib;
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Text;
 using RimWorld;
 using Verse;
-using System.Reflection;
+using Verse.AI;
+using Verse.Sound;
 
 namespace RimThreaded
 {
@@ -17,16 +20,6 @@ namespace RimThreaded
             AccessTools.FieldRefAccess<SituationalThoughtHandler, int>("lastMoodThoughtsRecalculationTick");
         public static AccessTools.FieldRef<SituationalThoughtHandler, List<Thought_Situational>> cachedThoughts =
             AccessTools.FieldRefAccess<SituationalThoughtHandler, List<Thought_Situational>>("cachedThoughts");
-
-        static readonly Type original = typeof(SituationalThoughtHandler);
-        static readonly Type patched = typeof(SituationalThoughtHandler_Patch);
-
-        public static void RunNonDestructivePatches()
-        {
-            ConstructorInfo constructorMethod = original.GetConstructor(new Type[] { typeof(Pawn) });
-            MethodInfo cpMethod = patched.GetMethod("Postfix_Constructor");
-            RimThreadedHarmony.harmony.Patch(constructorMethod, postfix: new HarmonyMethod(cpMethod));
-        }
 
         public static void Postfix_Constructor(SituationalThoughtHandler __instance, Pawn pawn)
         {
@@ -68,7 +61,7 @@ namespace RimThreaded
                 cachedSocialThought.lastQueryTick = Find.TickManager.TicksGame;
                 List<Thought_SituationalSocial> activeThoughts = cachedSocialThought.activeThoughts;
                 for (int index = 0; index < activeThoughts.Count; ++index)
-                    outThoughts.Add(activeThoughts[index]);
+                    outThoughts.Add((ISocialThought)activeThoughts[index]);
             }
             catch (KeyNotFoundException) { }
             return false;
@@ -124,11 +117,11 @@ namespace RimThreaded
           ThoughtDef def,
           Pawn otherPawn)
         {
-            Thought_SituationalSocial situationalSocial = null;
+            Thought_SituationalSocial situationalSocial = (Thought_SituationalSocial)null;
             try
             {
                 if (!ThoughtUtility.CanGetThought_NewTemp(__instance.pawn, def, false) || !def.Worker.CurrentSocialState(__instance.pawn, otherPawn).ActiveFor(def))
-                    return null;
+                    return (Thought_SituationalSocial)null;
                 situationalSocial = (Thought_SituationalSocial)ThoughtMaker.MakeThought(def);
                 situationalSocial.pawn = __instance.pawn;
                 situationalSocial.otherPawn = otherPawn;
@@ -136,7 +129,7 @@ namespace RimThreaded
             }
             catch (Exception ex)
             {
-                Log.Error("Exception while recalculating " + def + " thought state for pawn " + __instance.pawn + ": " + ex, false);
+                Log.Error("Exception while recalculating " + (object)def + " thought state for pawn " + (object)__instance.pawn + ": " + (object)ex, false);
             }
             return situationalSocial;
         }
@@ -175,13 +168,5 @@ namespace RimThreaded
             return false;
         }
 
-        internal static void RunDestructivePatches()
-        {
-            Type original = typeof(SituationalThoughtHandler);
-            Type patched = typeof(SituationalThoughtHandler_Patch);
-            RimThreadedHarmony.Prefix(original, patched, "AppendSocialThoughts");
-            RimThreadedHarmony.Prefix(original, patched, "Notify_SituationalThoughtsDirty");
-            RimThreadedHarmony.Prefix(original, patched, "RemoveExpiredThoughtsFromCache");
-        }
     }
 }

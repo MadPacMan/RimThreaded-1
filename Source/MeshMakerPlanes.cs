@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using System.Threading;
 using System;
 using Verse;
 using static RimThreaded.RimThreaded;
@@ -9,13 +10,6 @@ namespace RimThreaded
 
     public class MeshMakerPlanes_Patch
     {
-        internal static void RunDestructivePatches()
-        {
-            Type original = typeof(MeshMakerPlanes);
-            Type patched = typeof(MeshMakerPlanes_Patch);
-            RimThreadedHarmony.Prefix(original, patched, "NewPlaneMesh", new Type[] { typeof(Vector2), typeof(bool), typeof(bool), typeof(bool) });
-        }
-
         static readonly Func<object[], object> safeFunction = p =>
             MeshMakerPlanes.NewPlaneMesh((Vector2)p[0], (bool)p[1], (bool)p[2], (bool)p[3]);
 
@@ -31,6 +25,5 @@ namespace RimThreaded
             }
             return true;
         }
-
     }
 }

@@ -25,11 +25,5 @@ namespace RimThreaded
             return true;
         }
 
-        internal static void RunDestructivePatches()
-        {
-            Type original = typeof(LightningBoltMeshMaker);
-            Type patched = typeof(LightningBoltMeshMaker_Patch);
-            RimThreadedHarmony.Prefix(original, patched, "NewBoltMesh");
-        }
     }
 }

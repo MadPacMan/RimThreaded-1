@@ -139,11 +139,7 @@ namespace RimThreaded
             return false;
         }
 
-        internal static void RunDestructivePatches()
-        {
-            Type original = typeof(RegionCostCalculatorWrapper);
-            Type patched = typeof(RegionCostCalculatorWrapper_Patch);
-            RimThreadedHarmony.Prefix(original, patched, "Init");
-        }
+
+
     }
 }

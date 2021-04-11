@@ -1,7 +1,9 @@
 ﻿using RimWorld;
 using System;
 using System.Collections.Generic;
-using System.Reflection;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 using Verse;
 using static HarmonyLib.AccessTools;
 
@@ -10,31 +12,53 @@ namespace RimThreaded
     class TaleManager_Patch
     {
         public static FieldRef<TaleManager, List<Tale>> tales = FieldRefAccess<TaleManager, List<Tale>>("tales");
-
-        private static readonly MethodInfo methodCheckCullTales =
-            Method(typeof(TaleManager), "CheckCullTales", new Type[] { typeof(Tale) });
-        private static readonly Action<TaleManager, Tale> actionCheckCullTales =
-            (Action<TaleManager, Tale>)Delegate.CreateDelegate(
-                typeof(Action<TaleManager, Tale>), methodCheckCullTales);
-
-        public static void RunDestructivePatches()
+        public static bool CheckCullUnusedVolatileTales(TaleManager __instance)
         {
-            Type original = typeof(TaleManager);
-            Type patched = typeof(TaleManager_Patch);
-            RimThreadedHarmony.Prefix(original, patched, "Add");
-            RimThreadedHarmony.Prefix(original, patched, "RemoveTale");
-        }
-
-        public static bool Add(TaleManager __instance, Tale tale)
-        {
-            lock (__instance)
+            int num = 0;
+            for (int i = 0; i < tales(__instance).Count; i++)
             {
-                tales(__instance).Add(tale);
+                Tale tale1;
+                try
+                {
+                    tale1 = tales(__instance)[i];
+                } catch (ArgumentOutOfRangeException)
+                {
+                    break;
+                }
+                if (tale1 != null && tale1.def.type == TaleType.Volatile && tale1.Unused)
+                {
+                    num++;
+                }
             }
-            actionCheckCullTales(__instance, tale);
+
+            while (num > 350)
+            {
+                Tale tale = null;
+                float num2 = float.MaxValue;
+                for (int j = 0; j < tales(__instance).Count; j++)
+                {
+                    Tale tale2;
+                    try
+                    {
+                        tale2 = tales(__instance)[j];
+                    } catch (ArgumentOutOfRangeException)
+                    {
+                        break;
+                    }
+                    if (tale2 != null && tale2.def.type == TaleType.Volatile && tale2.Unused && tale2.InterestLevel < num2)
+                    {
+                        tale = tale2;
+                        num2 = tale2.InterestLevel;
+                    }
+                    
+                }
+
+                RemoveTale(__instance, tale);
+                num--;
+            }
             return false;
         }
-        public static bool RemoveTale(TaleManager __instance, Tale tale)
+        public static void RemoveTale(TaleManager __instance, Tale tale)
         {
             if (!tale.Unused)
             {
@@ -42,14 +66,11 @@ namespace RimThreaded
             }
             else
             {
-                lock (__instance)
+                lock (tales(__instance))
                 {
-                    List<Tale> newTales = new List<Tale>(tales(__instance));
-                    newTales.Remove(tale);
-                    tales(__instance) = newTales;
+                    tales(__instance).Remove(tale);
                 }
             }
-            return false;
         }
 
 

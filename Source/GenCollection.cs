@@ -2,8 +2,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
+using System.Text;
+using RimWorld;
 using Verse;
+using Verse.AI;
+using Verse.Sound;
 
 namespace RimThreaded
 {
@@ -212,26 +215,7 @@ namespace RimThreaded
             //}
         }
 
-        internal static void RunDestructivePatches()
-        {
-            Type original = typeof(GenCollection);
-            Type patched = typeof(GenCollection_Patch);
-            MethodInfo[] genCollectionMethods = original.GetMethods();
-            MethodInfo originalRemoveAll = null;
-            foreach (MethodInfo mi in genCollectionMethods)
-            {
-                if (mi.Name.Equals("RemoveAll") && mi.GetGenericArguments().Length == 2)
-                {
-                    originalRemoveAll = mi;
-                    break;
-                }
-            }
 
-            MethodInfo originalRemoveAllGeneric = originalRemoveAll.MakeGenericMethod(new Type[] { typeof(object), typeof(object) });
-            MethodInfo patchedRemoveAll = patched.GetMethod("RemoveAll_Object_Object_Patch");
-            HarmonyMethod prefixRemoveAll = new HarmonyMethod(patchedRemoveAll);
-            RimThreadedHarmony.harmony.Patch(originalRemoveAllGeneric, prefix: prefixRemoveAll);
 
-        }
     }
 }

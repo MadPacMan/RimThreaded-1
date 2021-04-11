@@ -1,8 +1,12 @@
-﻿using System;
+﻿using HarmonyLib;
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using RimWorld;
 using Verse;
+using Verse.AI;
+using Verse.Sound;
 using static HarmonyLib.AccessTools;
 
 namespace RimThreaded
@@ -12,31 +16,17 @@ namespace RimThreaded
     {
 
         public static List<ThingDef> resources = StaticFieldRefAccess<List<ThingDef>>(typeof(ResourceCounter), "resources");
-        private static readonly FieldRef<ResourceCounter, Dictionary<ThingDef, int>> countedAmountsFieldRef = 
-            FieldRefAccess<ResourceCounter, Dictionary<ThingDef, int>>("countedAmounts");
+
         public static FieldRef<ResourceCounter, Map> map =
             FieldRefAccess<ResourceCounter, Map>("map");
-
-        public static object lockObject = new object();
-
-        internal static void RunDestructivePatches()
-        {
-            Type original = typeof(ResourceCounter);
-            Type patched = typeof(ResourceCounter_Patch);
-            RimThreadedHarmony.Prefix(original, patched, "ResetDefs");
-            RimThreadedHarmony.Prefix(original, patched, "ResetResourceCounts");
-            RimThreadedHarmony.Prefix(original, patched, "GetCount"); //maybe not needed
-            RimThreadedHarmony.Prefix(original, patched, "UpdateResourceCounts"); //maybe not needed
-            RimThreadedHarmony.Prefix(original, patched, "get_TotalHumanEdibleNutrition"); //maybe not needed
-        }
-
+        public static FieldRef<ResourceCounter, Dictionary<ThingDef, int>> countedAmounts =
+            FieldRefAccess<ResourceCounter, Dictionary<ThingDef, int>>("countedAmounts");
         public static bool get_TotalHumanEdibleNutrition(ResourceCounter __instance, ref float __result)
-        {
+		{
             float num = 0f;
-            lock (lockObject)
+            lock (countedAmounts(__instance))
             {
-                Dictionary<ThingDef, int> snapshotCountedAmounts = countedAmountsFieldRef(__instance);
-                foreach (KeyValuePair<ThingDef, int> countedAmount in snapshotCountedAmounts)
+                foreach (KeyValuePair<ThingDef, int> countedAmount in countedAmounts(__instance))
                 {
                     if (countedAmount.Key.IsNutritionGivingIngestible && countedAmount.Key.ingestible.HumanEdible)
                     {
@@ -44,34 +34,37 @@ namespace RimThreaded
                     }
                 }
             }
-
             __result = num;
             return false;
         }
-
-        public static bool ResetDefs()
+        public static bool ResetDefs(ResourceCounter __instance)
         {
-            lock (lockObject)
+            lock (resources)
             {
-                resources = new List<ThingDef>((from def in DefDatabase<ThingDef>.AllDefs
+                resources.Clear();
+                resources.AddRange(from def in DefDatabase<ThingDef>.AllDefs
                                                where def.CountAsResource
                                                orderby def.resourceReadoutPriority descending
-                                               select def));
+                                               select def);
             }
             return false;
         }
 
         public static bool ResetResourceCounts(ResourceCounter __instance)
         {
-            lock (lockObject)
-            {                
-                Dictionary<ThingDef, int> newCountedAmounts = new Dictionary<ThingDef, int>();
-                List<ThingDef> tempResources = resources;
-                for (int i = 0; i < tempResources.Count; i++)
+            lock (__instance.AllCountedAmounts)
+            {
+                __instance.AllCountedAmounts.Clear();
+                for (int i = 0; i < resources.Count; i++)
                 {
-                    newCountedAmounts.Add(tempResources[i], 0);
+                    ThingDef resource;
+                    try
+                    {
+                        resource = resources[i];
+                    }
+                    catch(ArgumentOutOfRangeException) { break; }
+                    __instance.AllCountedAmounts.Add(resource, 0);
                 }
-                countedAmountsFieldRef(__instance) = newCountedAmounts;
             }
 
             return false;
@@ -85,7 +78,7 @@ namespace RimThreaded
                 return false;
             }
 
-            lock (lockObject)
+            lock (__instance.AllCountedAmounts)
             {
                 if (__instance.AllCountedAmounts.TryGetValue(rDef, out int value))
                 {
@@ -93,37 +86,45 @@ namespace RimThreaded
                     return false;
                 }
 
-                Dictionary<ThingDef, int> newCountedAmounts = new Dictionary<ThingDef, int>(__instance.AllCountedAmounts);
                 Log.Error("Looked for nonexistent key " + rDef + " in counted resources.");
-                newCountedAmounts.Add(rDef, 0);
-                countedAmountsFieldRef(__instance) = newCountedAmounts;
+                {
+                    __instance.AllCountedAmounts.Add(rDef, 0);
+                }
             }
             __result = 0;
             return false;
         }
+
+        public static bool GetCountIn(ResourceCounter __instance, ref int __result, ThingRequestGroup group)
+        {
+            int num = 0;
+            foreach (KeyValuePair<ThingDef, int> countedAmount in __instance.AllCountedAmounts.ToList())
+            {
+                if (group.Includes(countedAmount.Key))
+                {
+                    num += countedAmount.Value;
+                }
+            }
+
+            __result = num;
+            return false;
+        }
         public static bool UpdateResourceCounts(ResourceCounter __instance)
         {
-            lock (lockObject)
+            __instance.ResetResourceCounts();
+            List<SlotGroup> allGroupsListForReading = map(__instance).haulDestinationManager.AllGroupsListForReading;
+            for (int i = 0; i < allGroupsListForReading.Count; i++)
             {
-                __instance.ResetResourceCounts();
-                Dictionary<ThingDef, int> newCountedAmounts = new Dictionary<ThingDef, int>(__instance.AllCountedAmounts);
-                bool changed = false;
-                List<SlotGroup> allGroupsListForReading = map(__instance).haulDestinationManager.AllGroupsListForReading;
-                for (int i = 0; i < allGroupsListForReading.Count; i++)
+                foreach (Thing heldThing in allGroupsListForReading[i].HeldThings)
                 {
-                    foreach (Thing heldThing in allGroupsListForReading[i].HeldThings)
+                    Thing innerIfMinified = heldThing.GetInnerIfMinified();
+                    if (innerIfMinified.def.CountAsResource && (!innerIfMinified.IsNotFresh()))
                     {
-                        Thing innerIfMinified = heldThing.GetInnerIfMinified();
-                        if (innerIfMinified.def.CountAsResource && !innerIfMinified.IsNotFresh())
+                        lock (__instance.AllCountedAmounts)
                         {
-                            newCountedAmounts[innerIfMinified.def] += innerIfMinified.stackCount;
-                            changed = true;
+                            __instance.AllCountedAmounts[innerIfMinified.def] += innerIfMinified.stackCount;
                         }
                     }
-                }
-                if (changed)
-                {
-                    countedAmountsFieldRef(__instance) = newCountedAmounts;
                 }
             }
             return false;

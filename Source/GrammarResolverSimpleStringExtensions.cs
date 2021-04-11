@@ -211,20 +211,6 @@ namespace RimThreaded
             return false;
         }
 
-        internal static void RunDestructivePatches()
-        {
-            Type original = typeof(GrammarResolverSimpleStringExtensions);
-            Type patched = typeof(GrammarResolverSimpleStringExtensions_Patch);
-            RimThreadedHarmony.Prefix(original, patched, "Formatted", new Type[] { typeof(string), typeof(NamedArgument) });
-            RimThreadedHarmony.Prefix(original, patched, "Formatted", new Type[] { typeof(string), typeof(NamedArgument), typeof(NamedArgument) });
-            RimThreadedHarmony.Prefix(original, patched, "Formatted", new Type[] { typeof(string), typeof(NamedArgument), typeof(NamedArgument), typeof(NamedArgument) });
-            RimThreadedHarmony.Prefix(original, patched, "Formatted", new Type[] { typeof(string), typeof(NamedArgument), typeof(NamedArgument), typeof(NamedArgument), typeof(NamedArgument) });
-            RimThreadedHarmony.Prefix(original, patched, "Formatted", new Type[] { typeof(string), typeof(NamedArgument), typeof(NamedArgument), typeof(NamedArgument), typeof(NamedArgument), typeof(NamedArgument) });
-            RimThreadedHarmony.Prefix(original, patched, "Formatted", new Type[] { typeof(string), typeof(NamedArgument), typeof(NamedArgument), typeof(NamedArgument), typeof(NamedArgument), typeof(NamedArgument), typeof(NamedArgument) });
-            RimThreadedHarmony.Prefix(original, patched, "Formatted", new Type[] { typeof(string), typeof(NamedArgument), typeof(NamedArgument), typeof(NamedArgument), typeof(NamedArgument), typeof(NamedArgument), typeof(NamedArgument), typeof(NamedArgument) });
-            RimThreadedHarmony.Prefix(original, patched, "Formatted", new Type[] { typeof(string), typeof(NamedArgument), typeof(NamedArgument), typeof(NamedArgument), typeof(NamedArgument), typeof(NamedArgument), typeof(NamedArgument), typeof(NamedArgument), typeof(NamedArgument) });
-            RimThreadedHarmony.Prefix(original, patched, "Formatted", new Type[] { typeof(string), typeof(NamedArgument[]) });
 
-        }
     }
 }

@@ -50,11 +50,5 @@ namespace RimThreaded
             return false;
         }
 
-        internal static void RunDestructivePatches()
-        {
-            Type original = typeof(PawnRelationUtility);
-            Type patched = typeof(PawnRelationUtility_Patch);
-            RimThreadedHarmony.Prefix(original, patched, "GetMostImportantColonyRelative");
-        }
     }
 }

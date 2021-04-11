@@ -1,8 +1,13 @@
-﻿
-using System.Collections.Generic;
-using Verse;
-using System.Collections.Concurrent;
+﻿using HarmonyLib;
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using RimWorld;
+using Verse;
+using Verse.AI;
+using Verse.Sound;
+using System.Collections.Concurrent;
 
 namespace RimThreaded
 {
@@ -12,14 +17,34 @@ namespace RimThreaded
 
 		public static ConcurrentQueue<bool[]> conBlockedArrays = new ConcurrentQueue<bool[]>();
 
-		public static void RunDestructivePatches()
-        {
-			Type original = typeof(ShootLeanUtility);
-			Type patched = typeof(ShootLeanUtility_Patch);
-			RimThreadedHarmony.Prefix(original, patched, "LeanShootingSourcesFromTo");
+		public static void CalcShootableCellsOf(List<IntVec3> outCells, Thing t)
+		{
+			outCells.Clear();
+			if (t is Pawn)
+			{
+				outCells.Add(t.Position);
+				for (int i = 0; i < 4; i++)
+				{
+					IntVec3 intVec = t.Position + GenAdj.CardinalDirections[i];
+					if (intVec.CanBeSeenOver(t.Map))
+					{
+						outCells.Add(intVec);
+					}
+				}
+				return;
+			}
+			outCells.Add(t.Position);
+			if (t.def.size.x != 1 || t.def.size.z != 1)
+			{
+				foreach (IntVec3 intVec2 in t.OccupiedRect())
+				{
+					if (intVec2 != t.Position)
+					{
+						outCells.Add(intVec2);
+					}
+				}
+			}
 		}
-
-
 		private static void ReturnWorkingBlockedArray(bool[] ar)
 		{
 			conBlockedArrays.Enqueue(ar);

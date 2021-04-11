@@ -60,14 +60,7 @@ namespace RimThreaded
 				{
 					if (giver.def.scanThings)
 					{
-						Predicate<Thing> predicate;
-						if (scanner is WorkGiver_DoBill workGiver_DoBill)
-						{
-							predicate = (Thing t) => !t.IsForbidden(pawn) && WorkGiver_Scanner_Patch.HasJobOnThing(workGiver_DoBill, pawn, t);
-						} else {
-							predicate = (Thing t) => !t.IsForbidden(pawn) && scanner.HasJobOnThing(pawn, t);
-						}
-						
+						Predicate<Thing> predicate = (Thing t) => !t.IsForbidden(pawn) && scanner.HasJobOnThing(pawn, t);
 						List<Thing> thingList = cell.GetThingList(pawn.Map);
 						for (int i = 0; i < thingList.Count; i++)
 						{
@@ -157,15 +150,7 @@ namespace RimThreaded
 					{
 						if (scanner.def.scanThings)
 						{
-							Predicate<Thing> validator;
-							if (scanner is WorkGiver_DoBill workGiver_DoBill)
-							{
-								validator = (Thing t) => !t.IsForbidden(pawn) && WorkGiver_Scanner_Patch.HasJobOnThing(workGiver_DoBill, pawn, t);
-							}
-							else
-							{
-								validator = (Thing t) => !t.IsForbidden(pawn) && scanner.HasJobOnThing(pawn, t);
-							}
+							Predicate<Thing> validator = (Thing t) => !t.IsForbidden(pawn) && scanner.HasJobOnThing(pawn, t);
 							IEnumerable<Thing> enumerable = scanner.PotentialWorkThingsGlobal(pawn);
 							Thing thing;
 							if (scanner.Prioritized)
@@ -202,6 +187,9 @@ namespace RimThreaded
 									workGiver.def.defName.Equals("FillFermentingBarrel") ||
 									//workGiver.def.defName.Equals("HaulGeneral") ||
 									workGiver.def.defName.Equals("HandlingFeedPatientAnimals") ||
+									workGiver.def.defName.Equals("DoBillsButcherFlesh") ||
+									workGiver.def.defName.Equals("DoBillsCook") ||
+									workGiver.def.defName.Equals("DoBillsMakeApparel") ||
 									workGiver.def.defName.Equals("Train") ||
 									workGiver.def.defName.Equals("VisitSickPawn")
 								)
@@ -217,28 +205,9 @@ namespace RimThreaded
 										Log.Warning("ClosestThingReachable2 Took over 200ms for workGiver: " + workGiver.def.defName);
 									}
 								}
-								else if(
-										workGiver.def.defName.Equals("DoBillsButcherFlesh") ||
-										workGiver.def.defName.Equals("DoBillsCook") ||
-										workGiver.def.defName.Equals("DoBillsMakeApparel")) 
-								{
-									thing = null;
-									//ThingGrid_Patch
-									int mapSizeX = pawn.Map.Size.x;
-									int mapSizeZ = pawn.Map.Size.z;
-									int index = pawn.Map.cellIndices.CellToIndex(pawn.Position);
-									//Dictionary<Bill, float> billPointsDict = ThingGrid_Patch.thingBillPoints[t.def];
-									Dictionary<WorkGiver_Scanner, Dictionary<float, List<HashSet<Thing>[]>>> ingredientDict = ThingGrid_Patch.mapIngredientDict[pawn.Map];
-									ThingRequest thingReq = scanner.PotentialWorkThingRequest;
-									if(!ingredientDict.TryGetValue(scanner, out Dictionary<float, List<HashSet<Thing>[]>> scoreToJumboCellsList)) {
-										scoreToJumboCellsList = new Dictionary<float, List<HashSet<Thing>[]>>();
-										List<Thing> thingsMatchingRequest = pawn.Map.listerThings.ThingsMatching(thingReq);
-									}
-								}
 								else
                                 {
 									DateTime startTime = DateTime.Now;
-									//long
 									thing = GenClosest.ClosestThingReachable(pawn.Position, pawn.Map, scanner.PotentialWorkThingRequest, scanner.PathEndMode, TraverseParms.For(pawn, scanner.MaxPathDanger(pawn)), 9999f, validator, enumerable, 0, scanner.MaxRegionsToScanBeforeGlobalSearch, enumerable != null);
 									if (DateTime.Now.Subtract(startTime).TotalMilliseconds > 200)
 									{
@@ -350,11 +319,6 @@ namespace RimThreaded
 			return false;
 		}
 
-        internal static void RunDestructivePatches()
-		{
-			Type original = typeof(JobGiver_Work);
-			Type patched = typeof(JobGiver_Work_Patch);
-			RimThreadedHarmony.Prefix(original, patched, "TryIssueJobPackage");
-		}
-    }
+
+	}
 }

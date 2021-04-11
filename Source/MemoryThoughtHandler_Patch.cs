@@ -1,8 +1,9 @@
-﻿using HarmonyLib;
-using RimWorld;
+﻿using RimWorld;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 using Verse;
 using static HarmonyLib.AccessTools;
 
@@ -10,82 +11,50 @@ namespace RimThreaded
 {
     public class MemoryThoughtHandler_Patch
     {
+        static Action<MemoryThoughtHandler> actionRemoveExpiredMemories = (Action<MemoryThoughtHandler>)Delegate.CreateDelegate
+            (typeof(Action<MemoryThoughtHandler>), Method(typeof(MemoryThoughtHandler), "RemoveExpiredMemories"));
 
-        private static readonly FieldRef<MemoryThoughtHandler, List<Thought_Memory>> memoriesFieldRef = 
-            FieldRefAccess<MemoryThoughtHandler, List<Thought_Memory>>("memories");
-
-        public static void RunDestructivePatches()
+        public static bool MemoryThoughtInterval(MemoryThoughtHandler __instance)
         {
-            Type original = typeof(MemoryThoughtHandler);
-            Type patched = typeof(MemoryThoughtHandler_Patch);
-            RimThreadedHarmony.Prefix(original, patched, "RemoveMemory");
-            //RimThreadedHarmony.Prefix(original, patched, "TryGainMemory", new Type[] { typeof(Thought_Memory), typeof(Pawn) });
-        }
-
-        public static bool RemoveMemory(MemoryThoughtHandler __instance, Thought_Memory th)
-        {
-            lock (__instance)
+            for (int i = 0; i < __instance.Memories.Count; i++)
             {
-                List<Thought_Memory> newMemories = new List<Thought_Memory>(__instance.Memories);
-                if (!newMemories.Remove(th))
+                Thought_Memory memory;
+                try
                 {
-                    Log.Warning("Tried to remove memory thought of def " + th.def.defName + " but it's not here.");
+                    memory = __instance.Memories[i];
                 }
-                else
+                catch (ArgumentOutOfRangeException)
                 {
-                    memoriesFieldRef(__instance) = newMemories;
+                    break;
                 }
+                if(memory != null)
+                    memory.ThoughtInterval();
             }
+
+            actionRemoveExpiredMemories(__instance);
             return false;
         }
 
-        public static bool TryGainMemory(MemoryThoughtHandler __instance, Thought_Memory newThought, Pawn otherPawn = null)
+        public static bool ExposeData(MemoryThoughtHandler __instance)
         {
-            if (!ThoughtUtility.CanGetThought_NewTemp(__instance.pawn, newThought.def))
+            List<Thought_Memory> memories = __instance.Memories;
+            Scribe_Collections.Look(ref memories, "memories", LookMode.Deep);
+            if (Scribe.mode != LoadSaveMode.PostLoadInit)
             {
                 return false;
             }
 
-            if (newThought is Thought_MemorySocial && newThought.otherPawn == null && otherPawn == null)
+            for (int num = memories.Count - 1; num >= 0; num--)
             {
-                Log.Error(string.Concat("Can't gain social thought ", newThought.def, " because its otherPawn is null and otherPawn passed to this method is also null. Social thoughts must have otherPawn."));
-                return false;
-            }
-
-            newThought.pawn = __instance.pawn;
-            newThought.otherPawn = otherPawn;
-            if (!newThought.TryMergeWithExistingMemory(out bool showBubble))
-            {
-                lock (__instance) //ADDED
+                Thought_Memory memory = memories[num];
+                if (memory == null || memory.def == null)
                 {
-                    memoriesFieldRef(__instance).Add(newThought);
+                    memories.RemoveAt(num);
                 }
-            }
-
-            if (newThought.def.stackLimitForSameOtherPawn >= 0)
-            {
-                while (__instance.NumMemoriesInGroup(newThought) > newThought.def.stackLimitForSameOtherPawn)
+                else
                 {
-                    __instance.RemoveMemory(__instance.OldestMemoryInGroup(newThought));
+                    memory.pawn = __instance.pawn;
                 }
-            }
-
-            if (newThought.def.stackLimit >= 0)
-            {
-                while (__instance.NumMemoriesOfDef(newThought.def) > newThought.def.stackLimit)
-                {
-                    __instance.RemoveMemory(__instance.OldestMemoryOfDef(newThought.def));
-                }
-            }
-
-            if (newThought.def.thoughtToMake != null)
-            {
-                __instance.TryGainMemory(newThought.def.thoughtToMake, newThought.otherPawn);
-            }
-
-            if (showBubble && newThought.def.showBubble && __instance.pawn.Spawned && PawnUtility.ShouldSendNotificationAbout(__instance.pawn))
-            {
-                MoteMaker.MakeMoodThoughtBubble(__instance.pawn, newThought);
             }
             return false;
         }

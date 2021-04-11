@@ -312,12 +312,5 @@ namespace RimThreaded
             }
             return false;
         }
-
-        internal static void RunDestructivePatches()
-        {
-            Type original = typeof(TimeControls);
-            Type patched = typeof(TimeControls_Patch);
-            RimThreadedHarmony.Prefix(original, patched, "DoTimeControlsGUI");
-        }
     }
 }

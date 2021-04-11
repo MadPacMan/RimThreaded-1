@@ -72,12 +72,5 @@ namespace RimThreaded
             return false;
         }
 
-        internal static void RunDestructivePatches()
-        {
-            Type original = typeof(Battle);
-            Type patched = typeof(Battle_Patch);
-            RimThreadedHarmony.Prefix(original, patched, "ExposeData");
-            RimThreadedHarmony.Prefix(original, patched, "Absorb");
-        }
     }
 }

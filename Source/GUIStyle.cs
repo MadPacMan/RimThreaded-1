@@ -35,12 +35,5 @@ namespace RimThreaded
             return true;
         }
 
-        internal static void RunDestructivePatches()
-        {
-            Type original = typeof(GUIStyle);
-            Type patched = typeof(GUIStyle_Patch);
-            RimThreadedHarmony.Prefix(original, patched, "CalcHeight");
-            RimThreadedHarmony.Prefix(original, patched, "CalcSize");
-        }
     }
 }

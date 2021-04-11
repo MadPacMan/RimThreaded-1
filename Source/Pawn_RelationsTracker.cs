@@ -5,6 +5,8 @@ using System.Linq;
 using System.Text;
 using RimWorld;
 using Verse;
+using Verse.AI;
+using Verse.Sound;
 using System.Collections.Concurrent;
 
 namespace RimThreaded
@@ -18,7 +20,7 @@ namespace RimThreaded
             AccessTools.FieldRefAccess<Pawn_RelationsTracker, bool>("canCacheFamilyByBlood");
         public static AccessTools.FieldRef<Pawn_RelationsTracker, bool> familyByBloodIsCached =
             AccessTools.FieldRefAccess<Pawn_RelationsTracker, bool>("familyByBloodIsCached");
-        public static AccessTools.FieldRef<Pawn_RelationsTracker, HashSet<Pawn>> cachedFamilyByBloodFieldRef =
+        public static AccessTools.FieldRef<Pawn_RelationsTracker, HashSet<Pawn>> cachedFamilyByBlood =
             AccessTools.FieldRefAccess<Pawn_RelationsTracker, HashSet<Pawn>>("cachedFamilyByBlood");
         public static AccessTools.FieldRef<Pawn_RelationsTracker, HashSet<Pawn>> pawnsWithDirectRelationsWithMe =
             AccessTools.FieldRefAccess<Pawn_RelationsTracker, HashSet<Pawn>>("pawnsWithDirectRelationsWithMe");
@@ -28,14 +30,6 @@ namespace RimThreaded
 
         public static AccessTools.FieldRef<Pawn_RelationsTracker, List<DirectPawnRelation>> directRelations =
             AccessTools.FieldRefAccess<Pawn_RelationsTracker, List<DirectPawnRelation>>("directRelations");
-
-        internal static void RunDestructivePatches()
-        {
-            Type original = typeof(Pawn_RelationsTracker);
-            Type patched = typeof(Pawn_RelationsTracker_Patch);
-            RimThreadedHarmony.Prefix(original, patched, "get_FamilyByBlood");
-            RimThreadedHarmony.Prefix(original, patched, "get_RelatedPawns");
-        }
 
         public static IEnumerable<Pawn> get_PotentiallyRelatedPawns2(Pawn_RelationsTracker __instance)
         {
@@ -109,7 +103,7 @@ namespace RimThreaded
         public static void AffectBondedAnimalsOnMyDeath(Pawn_RelationsTracker __instance)
         {
             int num1 = 0;
-            Pawn pawn2 = null;
+            Pawn pawn2 = (Pawn)null;
             for (int index = 0; index < directRelations(__instance).Count; ++index)
             {
                 if (directRelations(__instance)[index].def == PawnRelationDefOf.Bond && directRelations(__instance)[index].otherPawn.Spawned)
@@ -117,19 +111,19 @@ namespace RimThreaded
                     pawn2 = directRelations(__instance)[index].otherPawn;
                     ++num1;
                     float num2 = Rand.Value;
-                    MentalStateDef stateDef = num2 >= 0.25 ? (num2 >= 0.5 ? (num2 >= 0.75 ? MentalStateDefOf.Manhunter : MentalStateDefOf.Berserk) : MentalStateDefOf.Wander_Psychotic) : MentalStateDefOf.Wander_Sad;
-                    directRelations(__instance)[index].otherPawn.mindState.mentalStateHandler.TryStartMentalState(stateDef, "MentalStateReason_BondedHumanDeath".Translate(pawn(__instance)).Resolve(), true, false, null, false);
+                    MentalStateDef stateDef = (double)num2 >= 0.25 ? ((double)num2 >= 0.5 ? ((double)num2 >= 0.75 ? MentalStateDefOf.Manhunter : MentalStateDefOf.Berserk) : MentalStateDefOf.Wander_Psychotic) : MentalStateDefOf.Wander_Sad;
+                    directRelations(__instance)[index].otherPawn.mindState.mentalStateHandler.TryStartMentalState(stateDef, "MentalStateReason_BondedHumanDeath".Translate((NamedArgument)(Thing)pawn(__instance)).Resolve(), true, false, (Pawn)null, false);
                 }
             }
             if (num1 == 1)
             {
-                Messages.Message((pawn2.Name == null || pawn2.Name.Numerical ? "MessageBondedAnimalMentalBreak".Translate(pawn2.LabelIndefinite(), pawn(__instance).LabelShort, pawn2.Named("ANIMAL"), pawn(__instance).Named("HUMAN")) : "MessageNamedBondedAnimalMentalBreak".Translate(pawn2.KindLabelIndefinite(), pawn2.Name.ToStringShort, pawn(__instance).LabelShort, pawn2.Named("ANIMAL"), pawn(__instance).Named("HUMAN"))).CapitalizeFirst(), pawn2, MessageTypeDefOf.ThreatSmall, true);
+                Messages.Message((string)(pawn2.Name == null || pawn2.Name.Numerical ? "MessageBondedAnimalMentalBreak".Translate((NamedArgument)pawn2.LabelIndefinite(), (NamedArgument)pawn(__instance).LabelShort, pawn2.Named("ANIMAL"), pawn(__instance).Named("HUMAN")) : "MessageNamedBondedAnimalMentalBreak".Translate((NamedArgument)pawn2.KindLabelIndefinite(), (NamedArgument)pawn2.Name.ToStringShort, (NamedArgument)pawn(__instance).LabelShort, pawn2.Named("ANIMAL"), pawn(__instance).Named("HUMAN"))).CapitalizeFirst(), (LookTargets)(Thing)pawn2, MessageTypeDefOf.ThreatSmall, true);
             }
             else
             {
                 if (num1 <= 1)
                     return;
-                Messages.Message("MessageBondedAnimalsMentalBreak".Translate(num1, pawn(__instance).LabelShort, pawn(__instance).Named("HUMAN")), pawn2, MessageTypeDefOf.ThreatSmall, true);
+                Messages.Message((string)"MessageBondedAnimalsMentalBreak".Translate((NamedArgument)num1, (NamedArgument)pawn(__instance).LabelShort, pawn(__instance).Named("HUMAN")), (LookTargets)(Thing)pawn2, MessageTypeDefOf.ThreatSmall, true);
             }
         }
         public static void RemoveMySpouseMarriageRelatedThoughts(Pawn_RelationsTracker __instance)
@@ -147,56 +141,26 @@ namespace RimThreaded
             {
                 __result = FamilyByBlood_Internal(__instance);
                 return false;
-            }            
+            }
             if (!familyByBloodIsCached(__instance))
             {
-                HashSet<Pawn> cachedFamilyByBlood = new HashSet<Pawn>();
+                cachedFamilyByBlood(__instance).Clear();
                 foreach (Pawn pawn in FamilyByBlood_Internal(__instance))
-                    cachedFamilyByBlood.Add(pawn);
+                    cachedFamilyByBlood(__instance).Add(pawn);
                 familyByBloodIsCached(__instance) = true;
-                cachedFamilyByBloodFieldRef(__instance) = cachedFamilyByBlood;
-            }            
-            __result = cachedFamilyByBloodFieldRef(__instance);
+            }
+            __result = (IEnumerable<Pawn>)cachedFamilyByBlood(__instance);
             return false;
             
-        }
-
-        public static bool get_RelatedPawns(Pawn_RelationsTracker __instance, ref IEnumerable<Pawn> __result)
-        {
-            __result = RelatedPawns2(__instance);
-            return false;
-        }
-
-        private static IEnumerable<Pawn> RelatedPawns2(Pawn_RelationsTracker __instance)
-        {
-            canCacheFamilyByBlood(__instance) = true;
-            familyByBloodIsCached(__instance) = false;
-            cachedFamilyByBloodFieldRef(__instance) = new HashSet<Pawn>();
-            try
-            {
-                foreach (Pawn potentiallyRelatedPawn in __instance.PotentiallyRelatedPawns)
-                {
-                    if ((familyByBloodIsCached(__instance) && cachedFamilyByBloodFieldRef(__instance).Contains(potentiallyRelatedPawn)) || pawn(__instance).GetRelations(potentiallyRelatedPawn).Any())
-                    {
-                        yield return potentiallyRelatedPawn;
-                    }
-                }
-            }
-            finally
-            {
-                canCacheFamilyByBlood(__instance) = false;
-                familyByBloodIsCached(__instance) = false;
-                cachedFamilyByBloodFieldRef(__instance) = new HashSet<Pawn>();
-            }
         }
 
         private static IEnumerable<Pawn> FamilyByBlood_Internal(Pawn_RelationsTracker __instance)
         {
             if (__instance.RelatedToAnyoneOrAnyoneRelatedToMe)
             {
-                List<Pawn> familyStack = null;
-                List<Pawn> familyChildrenStack = null;
-                HashSet<Pawn> familyVisited = null;
+                List<Pawn> familyStack = (List<Pawn>)null;
+                List<Pawn> familyChildrenStack = (List<Pawn>)null;
+                HashSet<Pawn> familyVisited = (HashSet<Pawn>)null;
                 try
                 {
                     //familyStack = SimplePool<List<Pawn>>.Get();
@@ -244,9 +208,9 @@ namespace RimThreaded
                                     familyVisited.Add(child1);
                                 }
                             }
-                            child = null;
+                            child = (Pawn)null;
                         }
-                        p = null;
+                        p = (Pawn)null;
                     }
                 }
                 finally

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using UnityEngine;
 using Verse;
 using static RimThreaded.RimThreaded;
@@ -10,13 +11,6 @@ namespace RimThreaded
     {
 		static readonly Func<object[], object> safeFunction = parameters =>
 			MaterialPool.MatFrom((MaterialRequest)parameters[0]);
-
-		public static void RunDestructivePatches()
-        {
-			Type original = typeof(MaterialPool);
-			Type patched = typeof(MaterialPool_Patch);
-			RimThreadedHarmony.Prefix(original, patched, "MatFrom", new Type[] { typeof(MaterialRequest) });
-		}
 
 		public static bool MatFrom(ref Material __result, MaterialRequest req)
 		{

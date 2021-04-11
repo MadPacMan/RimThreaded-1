@@ -78,12 +78,9 @@ namespace RimThreaded
                 IList<int> list = extraRootTiles as IList<int>;
                 if (list != null)
                 {
-                    for (int k = 0; k < list.Count; k++)
-                    {
-                        int num3 = list[k];
-                        traversalDistance[num3] = 0;
-                        openSet.Enqueue(num3);
-                    }
+                    int num3 = list[j];
+                    traversalDistance[num3] = 0;
+                    openSet.Enqueue(num3);
                 }
                 else
                 {
@@ -143,12 +140,5 @@ namespace RimThreaded
             }
         }
 
-        internal static void RunDestructivePatches()
-        {
-            Type original = typeof(WorldFloodFiller);
-            Type patched = typeof(WorldFloodFiller_Patch);
-            RimThreadedHarmony.Prefix(original, patched, "FloodFill", new Type[] { typeof(int), typeof(Predicate<int>), typeof(Func<int, int, bool>), typeof(int), typeof(IEnumerable<int>) });
-
-        }
     }
 }

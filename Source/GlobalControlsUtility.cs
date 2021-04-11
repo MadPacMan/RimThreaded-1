@@ -1,7 +1,13 @@
-﻿using System;
-using Verse;
-using UnityEngine;
+﻿using HarmonyLib;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
 using RimWorld;
+using Verse;
+using Verse.AI;
+using Verse.Sound;
+using UnityEngine;
 
 namespace RimThreaded
 {
@@ -26,11 +32,5 @@ namespace RimThreaded
             curBaseY -= 26f;
 		}
 
-        internal static void RunDestructivePatches()
-        {
-            Type original = typeof(GlobalControlsUtility);
-            Type patched = typeof(GlobalControlsUtility_Patch);
-            RimThreadedHarmony.Postfix(original, patched, "DoTimespeedControls");
-        }
-    }
+	}
 }

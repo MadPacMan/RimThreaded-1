@@ -35,11 +35,5 @@ namespace RimThreaded
             return false;
         }
 
-        internal static void RunDestructivePatches()
-        {
-            Type original = typeof(ThingCountUtility);
-            Type patched = typeof(ThingCountUtility_Patch);
-            RimThreadedHarmony.Prefix(original, patched, "AddToList");
-        }
     }
 }

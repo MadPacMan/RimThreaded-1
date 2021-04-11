@@ -1,8 +1,12 @@
 ﻿using HarmonyLib;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
+using RimWorld;
 using Verse;
+using Verse.AI;
+using Verse.Sound;
 
 namespace RimThreaded
 {
@@ -27,11 +31,5 @@ namespace RimThreaded
             return false;
         }
 
-        internal static void RunDestructivePatches()
-        {
-            Type original = typeof(LanguageWordInfo);
-            Type patched = typeof(LanguageWordInfo_Patch);
-            RimThreadedHarmony.Prefix(original, patched, "TryResolveGender");
-        }
     }
 }
